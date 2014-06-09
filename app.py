@@ -1,98 +1,111 @@
-from PyQt4 import QtGui  # (the example applies equally well to PySide)
-import pyqtgraph as pg
-import sys
+import os
+import serial
+from serial.tools import list_ports
+import time
+
+##Variables
+rct1threshold = 0
+rct1pwm = 0
+
+rct2threshold = 0
+rct2pwm = 0
+
+rct3threshold = 0
+rct3pwm = 0
+
+rct4threshold = 0
+rct4pwm = 0
+
+wastepwm = 0
+
+port = "/dev/ttyACM0"
 
 
-def main():
-	## Always start by initializing Qt (only once per application)
-	app = QtGui.QApplication(sys.argv)
+##Initialize Serial
 
-	## Variables
+#may be useful if other serial ports are in existance
+'''def serial_ports():
+    """
+    Returns a generator for all available serial ports
+    """
+    if os.name == 'nt':
+        # windows
+        for i in range(256):
+            try:
+                s = serial.Serial(i)
+                s.close()
+                yield 'COM' + str(i + 1)
+            except serial.SerialException:
+                pass
+    else:
+        # unix
+        for port in list_ports.comports():
+            yield port[0]
+
+print list(serial_ports())'''
 
 
 
-	## Define a top-level widget to hold everything
-	w = QtGui.QWidget()
-	#w.resize(20,20)
 
-	## Create some widgets to be placed inside
-	chkbtn = QtGui.QPushButton('Check Connection')
-	sndbtn = QtGui.QPushButton('Update Values')
-	strtbtn = QtGui.QPushButton('Start/Stop')
+def connectserial():
+	sercom = serial.Serial(port, 9600, timeout = 0)
+	sercom.baudrate=9600
+	sercom.parity = serial.PARITY_NONE
+	sercom.bytesize = serial.EIGHTBITS
+	sercom.stopbits = serial.STOPBITS_ONE
+	
+	
+	while True:
+	    for char in "test\n":
+		print sercom.readline()
+		sercom.write(char)
+		
+		print 'sending: ' + char
+		
 
-	rct1threasholdlbl = QtGui.QLabel('CO2 Threashold (%)')
-	rct1percentlbl = QtGui.QLabel('Pump Output Level (%)')
-	rct1lbl = QtGui.QLabel('Bioreactor 1:')
-	rct1threshtext = QtGui.QLineEdit('')
-	rct1outputtext = QtGui.QLineEdit('')
+	ser.close()
 
-	rct2threasholdlbl = QtGui.QLabel('CO2 Threashold (%)')
-	rct2percentlbl = QtGui.QLabel('Pump Output Level (%)')
-	rct2lbl = QtGui.QLabel('Bioreactor 2:')
-	rct2threshtext = QtGui.QLineEdit('')
-	rct2outputtext = QtGui.QLineEdit('')
 
-	rct3threasholdlbl = QtGui.QLabel('CO2 Threashold (%)')
-	rct3percentlbl = QtGui.QLabel('Pump Output Level (%)')
-	rct3lbl = QtGui.QLabel('Bioreactor 3:')
-	rct3threshtext = QtGui.QLineEdit('')
-	rct3outputtext = QtGui.QLineEdit('')
+'''
+	print 'waiting:'
+	for character in 'test\n':
+		print 'writing character '+ character
+		sercom.write(character)
+		print 'sleeping 1s'		
+		time.sleep(1)
+		print 'waking..'
+	print sercom.inWaiting()
+	
+	if sercom.read(4) == "test":
+		#update gui with 'connected'
+	else:
+		#update gui with 'not connected
+	sercom.close()'''
 
-	rct4threasholdlbl = QtGui.QLabel('CO2 Threashold (%)')
-	rct4percentlbl = QtGui.QLabel('Pump Output Level (%)')
-	rct4lbl = QtGui.QLabel('Bioreactor 4:')
-	rct4threshtext = QtGui.QLineEdit('')
-	rct4outputtext = QtGui.QLineEdit('')
 
-	listw = QtGui.QListWidget()
-	plot = pg.PlotWidget()
 
-	## Create a grid layout to manage the widgets size and position
-	layout = QtGui.QGridLayout()
-	w.setLayout(layout)
+def convertvalues(string):
+	string = string.replace('.','')
+	num = int(string)
+	if num > 10000 or num < 0:
+		pass
+		#error
+	return (num / 256, num % 256)
+		
+'''def sendvalues():
+	compiledlist = []
+	compiledlist.append(convertvalues(rct1threshold))
+	compiledlist.append(convertvalues(rct1pwm ))
+	compiledlist.append(convertvalues(rct2threshold))
+	compiledlist.append(convertvalues(rct2pwm ))
+	compiledlist.append(convertvalues(rct3threshold))
+	compiledlist.append(convertvalues(rct3pwm ))
+	compiledlist.append(convertvalues(rct4threshold))
+	compiledlist.append(convertvalues(rct4pwm ))
 
-	## Add widgets to the layout in their proper positions
-	layout.addWidget(chkbtn, 0, 0)   # button goes in upper-left
-	layout.addWidget(sndbtn, 1, 0)   # button goes in upper-left
-	layout.addWidget(strtbtn, 2, 0)   # button goes in upper-left
-
-	layout.addWidget(rct1lbl,3,0)
-	layout.addWidget(rct1threasholdlbl,4,0)
-	layout.addWidget(rct1threshtext, 5, 0)   # text edit goes in middle-lef
-	layout.addWidget(rct1percentlbl,6,0)
-	layout.addWidget(rct1outputtext, 7, 0)
-
-	layout.addWidget(rct2lbl,9,0)
-	layout.addWidget(rct2threasholdlbl,10,0)
-	layout.addWidget(rct2threshtext, 11, 0)   # text edit goes in middle-lef
-	layout.addWidget(rct2percentlbl,12,0)
-	layout.addWidget(rct2outputtext, 13, 0)  
-
-	layout.addWidget(rct3lbl,14,0)
-	layout.addWidget(rct3threasholdlbl,15,0)
-	layout.addWidget(rct3threshtext, 16, 0)   # text edit goes in middle-lef
-	layout.addWidget(rct3percentlbl,17,0)
-	layout.addWidget(rct3outputtext, 18, 0) 
-
-	layout.addWidget(rct4lbl,19,0)
-	layout.addWidget(rct4threasholdlbl,20,0)
-	layout.addWidget(rct4threshtext, 21, 0)   # text edit goes in middle-lef
-	layout.addWidget(rct4percentlbl,22,0)
-	layout.addWidget(rct4outputtext, 23, 0) 
-
-	  
-
-	#layout.addWidget(listw, 8, 0)  # list widget goes in bottom-left
-	layout.addWidget(plot, 0, 1, 24, 3)  # plot goes on right side, spanning 3 rows
-
-	## Display the widget as a new window
-	w.show()
-
-	## Start the Qt event loop
-	sys.exit(app.exec_())
-	#app.exec_()
-
-if __name__ == '__main__':
-    main()
-
+	compiledlist.append(wastepwm)'''
+	
+	
+		
+connectserial()
 
