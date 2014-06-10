@@ -165,6 +165,25 @@ def readinput(serial):
 	data = serial.readline()
 	#parse data here
 
+def start(serial):
+	serial.write('start\n')
+	recieved = ""
+	giveupcounter = 0 
+	while True:
+	    time.sleep(1)
+	    recieved += serial.readline()
+	    giveupcounter += 1
+	    if giveupcounter > 30:
+		print 'Connection Failed'
+		return 'Error'
+	    if recieved == "start\n": 
+		print 'Started'
+		return True
+	    if recieved == "stop\n":
+		print 'Stopped'
+		return False
+	
+
 ##Functions for GUI##
 
 
@@ -173,7 +192,7 @@ class Example(QtGui.QMainWindow):
     
     def __init__(self):
         super(Example, self).__init__()
-        
+        self.port = 0
         self.initUI()
         
     def initUI(self):      
@@ -201,18 +220,25 @@ class Example(QtGui.QMainWindow):
       
         sender = self.sender()
 	if sender.text() == "Connect":
-		port = connectserial()
+		self.port = connectserial()
 		if port != False:
 			self.statusBar().showMessage("Connection Made")
 		else:
 			self.statusBar().showMessage("Connection Failed")
 	if sender.text() == "Send Values":
-		if testserial(port,sendvalues()):
+		if testserial(self.port,sendvalues()):
 			self.statusBar().showMessage("Values Sent")
 		else:
 			self.statusBar().showMessage("Error: Values NOT Sent")
-        #self.statusBar().showMessage(sender.text() + ' was pressed')
-	#testconnection()
+	if sender.text() == "Start/Stop":
+		state = start(self.port)
+		if state == True:
+			self.statusBar().showMessage("Expiriment Started")
+		elif state == False:
+			self.statusBar().showMessage("Expiriment Stopped")
+		else:
+			self.statusBar().showMessage("Error, Please Retry 'Connect'")
+        
         
 def main():
     
