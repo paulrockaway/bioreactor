@@ -3,20 +3,20 @@ import serial
 from serial.tools import list_ports
 import time
 
-##Variables
-rct1threshold = 0
-rct1pwm = 0
+##Variables##
+rct1threshold = "20.00"
+rct1pwm = "33.3"
 
-rct2threshold = 0
-rct2pwm = 0
+rct2threshold = "99.99"
+rct2pwm = "100"
 
-rct3threshold = 0
-rct3pwm = 0
+rct3threshold = "100.00"
+rct3pwm = "0.13"
 
-rct4threshold = 0
-rct4pwm = 0
+rct4threshold = "25."
+rct4pwm = "35"
 
-wastepwm = 0
+wastepwm = "1"
 
 port = "/dev/ttyACM0"
 
@@ -48,12 +48,22 @@ print list(serial_ports())'''
 
 
 def connectserial():
-	sercom = serial.Serial(port, 9600, timeout = 0)
+	'''
+	Attempts to make a serial connection with the MSP430
+
+	Input:
+	None
+
+	Output:
+	If a connection is established, the pyserial communication class object
+	If no connection is established, False is returned
+	'''
+	sercom = serial.Serial(port, 9600, timeout = 0)		#set the name, baud rate, and timout of the serial connection as well as the following settings
 	sercom.baudrate=9600
 	sercom.parity = serial.PARITY_NONE
 	sercom.bytesize = serial.EIGHTBITS
 	sercom.stopbits = serial.STOPBITS_ONE
-	sercom.write("test\n")	
+	sercom.write("test\n")					#send 'test\n' and go into a loop while waiting to see if it is returned
 	print 'Attempting Connection'
 	recieved = ""
 	giveupcounter = 0 
@@ -66,36 +76,66 @@ def connectserial():
 		return False
 	    if recieved == "test\n":
 		print 'Connection Made'
-		return True
+		return sercom
 
-
-'''
-	print 'waiting:'
-	for character in 'test\n':
-		print 'writing character '+ character
-		sercom.write(character)
-		print 'sleeping 1s'		
+def testserial(sercom,sendstring):
+	print "Writing: '" + str(sendstring)+ "'"
+	sercom.write(str(sendstring))
+	testrecieved = ""
+	donecounter = 0
+	while True:
 		time.sleep(1)
-		print 'waking..'
-	print sercom.inWaiting()
-	
-	if sercom.read(4) == "test":
-		#update gui with 'connected'
+		testrecieved += sercom.readline()
+		print testrecieved
+		donecounter +=1
+		if donecounter > 30:
+			print "error"
+			return False
+		if testrecieved == str(sendstring):
+			print "correct"
+			return True
+
+
+def convertvalues(string):	
+	'''
+	Converts a percent string with two digits after the decimal (max) and makes it into two 8 bit words for sending via serial
+
+	Input:
+	String of percent
+
+	Output:
+	Returns a tuple of two integers that fit within 8 bits
+	'''
+	decimalflag = False
+	for character in string:					#check for decimal place
+		if character == '.':
+			decimalflag = True
+			break
+	if decimalflag:	
+		stringlist = string.split('.')				#split string at the decimal place
+		if len(stringlist[1]) == 1:
+			stringlist[1] += '0'
+			string = stringlist[0]+stringlist[1]
+		else:
+			string= string.replace('.','')
 	else:
-		#update gui with 'not connected
-	sercom.close()'''
-
-
-
-def convertvalues(string):
-	string = string.replace('.','')
+		string += '00'
 	num = int(string)
 	if num > 10000 or num < 0:
-		pass
+		print "Error, input percent not acceptable"
 		#error
 	return (num / 256, num % 256)
 		
-'''def sendvalues():
+def sendvalues():
+	'''
+	Converts all the values that need to be sent
+
+	Input:
+	None
+
+	Output:
+	List of tuples of 8 bit numbers
+	'''
 	compiledlist = []
 	compiledlist.append(convertvalues(rct1threshold))
 	compiledlist.append(convertvalues(rct1pwm ))
@@ -105,10 +145,11 @@ def convertvalues(string):
 	compiledlist.append(convertvalues(rct3pwm ))
 	compiledlist.append(convertvalues(rct4threshold))
 	compiledlist.append(convertvalues(rct4pwm ))
+	compiledlist.append(convertvalues(wastepwm))
+	return compiledlist
+	
+##run##	
+port = connectserial()
+testserial(port, sendvalues())
 
-	compiledlist.append(wastepwm)'''
-	
-	
-		
-connectserial()
 
