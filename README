@@ -1,1 +1,10 @@
-Place Readme info here
+This code is the continuation of a senior design project at Rice University
+The purpose of this is to control 8 pumps that interface with 4 bioreactors.
+An MSP430G2553 and Launchpad are being used to read the percent of CO2 from
+a gas analyzer. The python program 'app.py' interfaces with the MSP430. The end
+goal is to have a fully functional GUI with real time graph and text fields
+that can be used to update and start an experiment with the bioreactors.
+
+The purpose of the system is to allow the expiriment to be run for a month without
+user interaction. The destination computer for this software is an old laptop running XP.
+However, the python is currently being developed on an Ubuntu system.
