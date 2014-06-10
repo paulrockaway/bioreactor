@@ -53,17 +53,20 @@ def connectserial():
 	sercom.parity = serial.PARITY_NONE
 	sercom.bytesize = serial.EIGHTBITS
 	sercom.stopbits = serial.STOPBITS_ONE
-	
-	
+	sercom.write("test\n")	
+	print 'Attempting Connection'
+	recieved = ""
+	giveupcounter = 0 
 	while True:
-	    for char in "test\n":
-		print sercom.readline()
-		sercom.write(char)
-		
-		print 'sending: ' + char
-		
-
-	ser.close()
+	    time.sleep(1)
+	    recieved += sercom.readline()
+	    giveupcounter += 1
+	    if giveupcounter > 30:
+		print 'Connection Failed'
+		return False
+	    if recieved == "test\n":
+		print 'Connection Made'
+		return True
 
 
 '''
