@@ -1,7 +1,20 @@
+'''
+Serial Communication Protocol:
+Outgoing:
+	String of former lilst of tuples of values
+Incoming:
+	String of 'T's and 'F's to represent which pumps are on
+	String of values that indicate CO2 percentages in bioreactors
+'''
+
 import os
 import serial
 from serial.tools import list_ports
 import time
+
+import sys
+from PyQt4 import QtGui
+from PyQt4 import QtCore
 
 ##Variables##
 rct1threshold = "20.00"
@@ -21,7 +34,7 @@ wastepwm = "1"
 port = "/dev/ttyACM0"
 
 
-##Initialize Serial
+##Functions for Serial Communication##
 
 #may be useful if other serial ports are in existance
 '''def serial_ports():
@@ -148,8 +161,74 @@ def sendvalues():
 	compiledlist.append(convertvalues(wastepwm))
 	return compiledlist
 	
+def readinput(serial):
+	data = serial.readline()
+	#parse data here
+
+##Functions for GUI##
+
+
+
+class Example(QtGui.QMainWindow):
+    
+    def __init__(self):
+        super(Example, self).__init__()
+        
+        self.initUI()
+        
+    def initUI(self):      
+
+        btn1 = QtGui.QPushButton("Connect", self)
+        btn1.move(10, 10)
+
+        btn2 = QtGui.QPushButton("Send Values", self)
+        btn2.move(10, 50)
+
+	btn3 = QtGui.QPushButton("Start/Stop", self)
+        btn3.move(10, 90)
+            
+        btn1.clicked.connect(self.buttonClicked)            
+        btn2.clicked.connect(self.buttonClicked)
+	btn3.clicked.connect(self.buttonClicked)
+        
+        self.statusBar()
+        
+        self.setGeometry(300, 300, 700, 500)
+        self.setWindowTitle('Bioreactor Expiriment')
+        self.show()
+        
+    def buttonClicked(self):
+      
+        sender = self.sender()
+	if sender.text() == "Connect":
+		port = connectserial()
+		if port != False:
+			self.statusBar().showMessage("Connection Made")
+		else:
+			self.statusBar().showMessage("Connection Failed")
+	if sender.text() == "Send Values":
+		if testserial(port,sendvalues()):
+			self.statusBar().showMessage("Values Sent")
+		else:
+			self.statusBar().showMessage("Error: Values NOT Sent")
+        #self.statusBar().showMessage(sender.text() + ' was pressed')
+	#testconnection()
+        
+def main():
+    
+    app = QtGui.QApplication(sys.argv)
+    ex = Example()
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
+
 ##run##	
+
+'''
 port = connectserial()
 testserial(port, sendvalues())
+'''
 
 
