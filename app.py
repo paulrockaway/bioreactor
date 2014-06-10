@@ -17,19 +17,8 @@ from PyQt4 import QtGui
 from PyQt4 import QtCore
 
 ##Variables##
-rct1threshold = "20.00"
-rct1pwm = "33.3"
 
-rct2threshold = "99.99"
-rct2pwm = "100"
 
-rct3threshold = "100.00"
-rct3pwm = "0.13"
-
-rct4threshold = "25."
-rct4pwm = "35"
-
-wastepwm = "1"
 
 port = "/dev/ttyACM0"
 
@@ -196,23 +185,94 @@ class Example(QtGui.QMainWindow):
         self.initUI()
         
     def initUI(self):      
-
+	
         btn1 = QtGui.QPushButton("Connect", self)
-        btn1.move(10, 10)
+        btn1.move(10, 5)
 
         btn2 = QtGui.QPushButton("Send Values", self)
-        btn2.move(10, 50)
+        btn2.move(10, 40)
 
 	btn3 = QtGui.QPushButton("Start/Stop", self)
-        btn3.move(10, 90)
+        btn3.move(10, 75)
             
         btn1.clicked.connect(self.buttonClicked)            
         btn2.clicked.connect(self.buttonClicked)
 	btn3.clicked.connect(self.buttonClicked)
         
+	self.lbl1 = QtGui.QLabel('Reactor A:', self)
+        self.lbl1.move(10, 100)
+
+	self.lbl2 = QtGui.QLabel('  Threashold(%):', self)
+        self.lbl2.move(10, 115)
+	
+	self.le1 = QtGui.QLineEdit(self)
+        self.le1.move(10, 140)
+
+	self.lbl3 = QtGui.QLabel('  Output(%):', self)
+        self.lbl3.move(10, 165)
+
+	self.le2 = QtGui.QLineEdit(self)
+        self.le2.move(10, 190)
+
+	self.lbl4 = QtGui.QLabel('Reactor B:', self)
+        self.lbl4.move(10, 215)
+
+	self.lbl5 = QtGui.QLabel('  Threashold(%):', self)
+        self.lbl5.move(10, 230)
+
+	self.le3 = QtGui.QLineEdit(self)
+        self.le3.move(10, 255)
+
+	self.lbl6 = QtGui.QLabel('  Output(%):', self)
+        self.lbl6.move(10, 280)
+
+	self.le4 = QtGui.QLineEdit(self)
+        self.le4.move(10, 305)
+
+	self.lbl7 = QtGui.QLabel('Reactor C:', self)
+        self.lbl7.move(10, 330)
+
+	self.lbl8 = QtGui.QLabel('  Threashold(%):', self)
+        self.lbl8.move(10, 345)
+
+	self.le5 = QtGui.QLineEdit(self)
+        self.le5.move(10, 370)
+
+	self.lbl9 = QtGui.QLabel('  Output(%):', self)
+        self.lbl9.move(10, 395)
+
+	self.le6 = QtGui.QLineEdit(self)
+        self.le6.move(10, 420)
+
+	self.lbl10 = QtGui.QLabel('Reactor B:', self)
+        self.lbl10.move(10, 445)
+
+	self.lbl11 = QtGui.QLabel('  Threashold(%):', self)
+        self.lbl11.move(10, 460)
+
+	self.le7 = QtGui.QLineEdit(self)
+        self.le7.move(10, 485)
+
+	self.lbl12 = QtGui.QLabel('  Output(%):', self)
+        self.lbl12.move(10, 510)
+
+	self.le8 = QtGui.QLineEdit(self)
+        self.le8.move(10, 535)
+
+	self.lbl13 = QtGui.QLabel('Waste:', self)
+        self.lbl13.move(10, 560)
+
+	self.lbl14 = QtGui.QLabel('  Output(%):', self)
+        self.lbl14.move(10, 575)
+
+	self.le9 = QtGui.QLineEdit(self)
+        self.le9.move(10, 600)
+
+
+
         self.statusBar()
         
-        self.setGeometry(300, 300, 700, 500)
+        self.setGeometry(150, 10, 700, 650)
         self.setWindowTitle('Bioreactor Expiriment')
         self.show()
         
@@ -225,11 +285,24 @@ class Example(QtGui.QMainWindow):
 			self.statusBar().showMessage("Connection Made")
 		else:
 			self.statusBar().showMessage("Connection Failed")
+	
 	if sender.text() == "Send Values":
-		if testserial(self.port,sendvalues()):
+		
+		compiledlist = []
+		compiledlist.append(convertvalues(str(self.le1.text())))
+		compiledlist.append(convertvalues(str(self.le2.text()) ))
+		compiledlist.append(convertvalues(str(self.le3.text())))
+		compiledlist.append(convertvalues(str(self.le4.text()) ))
+		compiledlist.append(convertvalues(str(self.le5.text())))
+		compiledlist.append(convertvalues(str(self.le6.text()) ))
+		compiledlist.append(convertvalues(str(self.le7.text())))
+		compiledlist.append(convertvalues(str(self.le8.text()) ))
+		compiledlist.append(convertvalues(str(self.le9.text())))
+		if testserial(self.port,compiledlist):
 			self.statusBar().showMessage("Values Sent")
 		else:
 			self.statusBar().showMessage("Error: Values NOT Sent")
+	
 	if sender.text() == "Start/Stop":
 		state = start(self.port)
 		if state == True:
