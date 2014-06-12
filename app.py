@@ -11,14 +11,16 @@ import os
 import serial
 from serial.tools import list_ports
 import time
-
+import numpy as np
 import sys
 from PyQt4 import QtGui
 from PyQt4 import QtCore
+import pyqtgraph as pg
 
 ##Variables##
 
-
+xtest = np.array([0,1,3,4.5,7,10])
+ytest = np.array([1,2,3,4,5,6])
 
 port = "/dev/ttyACM0"
 
@@ -44,7 +46,7 @@ def serial_ports():
         for port in list_ports.comports():
             yield port[0]
 
-print list(serial_ports())
+#print list(serial_ports())
 
 
 
@@ -177,23 +179,39 @@ def start(serial):
 
 
 
-class Example(QtGui.QMainWindow):
+class Example(QtGui.QWidget):
     
     def __init__(self):
         super(Example, self).__init__()
         self.port = 0
         self.initUI()
         
+        
+        
     def initUI(self):      
+        ###########################################################################################
+       
+        grid = QtGui.QGridLayout()
+        
+        
+        self.graph = pg.PlotDataItem(xtest,ytest)
+        self.gwidget = pg.PlotWidget()
+        self.gwidget.addItem(self.graph)
+        self.gwidget.move(100,100)
+        
+        grid.addWidget(self.gwidget, 0,2,10,10)
+        grid.addWidget(QtGui.QLabel('  '),0,1)
+        
+        ##########################################################################################
         
         btn1 = QtGui.QPushButton("Connect", self)
-        btn1.move(10, 5)
+        grid.addWidget(btn1,0,0)
 
         btn2 = QtGui.QPushButton("Send Values", self)
-        btn2.move(10, 40)
+        grid.addWidget(btn2,1,0)
 
         btn3 = QtGui.QPushButton("Start/Stop", self)
-        btn3.move(10, 75)
+        grid.addWidget(btn3,2,0)
             
         btn1.clicked.connect(self.buttonClicked)            
         btn2.clicked.connect(self.buttonClicked)
@@ -268,9 +286,9 @@ class Example(QtGui.QMainWindow):
         self.le9 = QtGui.QLineEdit(self)
         self.le9.move(10, 600)
 
-
-
-        self.statusBar()
+        ########################################################## 
+        self.setLayout(grid)
+        #########################################################
         
         self.setGeometry(150, 10, 700, 650)
         self.setWindowTitle('Bioreactor Expiriment')
@@ -282,9 +300,9 @@ class Example(QtGui.QMainWindow):
         if sender.text() == "Connect":
                 self.port = connectserial()
                 if port != False:
-                        self.statusBar().showMessage("Connection Made")
+                        print "connection made"
                 else:
-                        self.statusBar().showMessage("Connection Failed")
+                        print "connection failed"
         
         if sender.text() == "Send Values":
                 
@@ -299,18 +317,18 @@ class Example(QtGui.QMainWindow):
                 compiledlist.append(convertvalues(str(self.le8.text()) ))
                 compiledlist.append(convertvalues(str(self.le9.text())))
                 if testserial(self.port,compiledlist):
-                        self.statusBar().showMessage("Values Sent")
+                        print "Values Sent"
                 else:
-                        self.statusBar().showMessage("Error: Values NOT Sent")
+                        print "Error: Values NOT Sent"
         
         if sender.text() == "Start/Stop":
                 state = start(self.port)
                 if state == True:
-                        self.statusBar().showMessage("Expiriment Started")
+                        print "Expiriment Started"
                 elif state == False:
-                        self.statusBar().showMessage("Expiriment Stopped")
+                        print "Expiriment Stopped"
                 else:
-                        self.statusBar().showMessage("Error, Please Retry 'Connect'")
+                        print "Error, Please Retry 'Connect'"
         
         
 def main():
@@ -318,10 +336,17 @@ def main():
     app = QtGui.QApplication(sys.argv)
     ex = Example()
     sys.exit(app.exec_())
+    
+    
+
+
+
+
 
 
 if __name__ == '__main__':
     main()
+    
 
 ##run##	
 
