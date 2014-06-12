@@ -22,9 +22,9 @@ import pyqtgraph as pg
 xtest = np.array([0,1,3,4.5,7,10])
 ytest = np.array([1,2,3,4,5,6])
 
-port = "/dev/ttyACM0"
 
-ptr = 0
+
+
 
 ##Functions for Serial Communication##
 
@@ -47,7 +47,7 @@ def serial_ports():
         for port in list_ports.comports():
             yield port[0]
 
-#print list(serial_ports())
+
 
 
 
@@ -63,25 +63,31 @@ def connectserial():
         If a connection is established, the pyserial communication class object
         If no connection is established, False is returned
         '''
-        sercom = serial.Serial(port, 9600, timeout = 0)		#set the name, baud rate, and timout of the serial connection as well as the following settings
-        sercom.baudrate=9600
-        sercom.parity = serial.PARITY_NONE
-        sercom.bytesize = serial.EIGHTBITS
-        sercom.stopbits = serial.STOPBITS_ONE
-        sercom.write("test\n")					#send 'test\n' and go into a loop while waiting to see if it is returned
-        print 'Attempting Connection'
-        recieved = ""
-        giveupcounter = 0 
-        while True:
-            time.sleep(1)
-            recieved += sercom.readline()
-            giveupcounter += 1
-            if giveupcounter > 30:
-                print 'Connection Failed'
-                return False
-            if recieved == "test\n":
-                print 'Connection Made'
-                return sercom
+                
+        for testport in serial_ports():       
+                print testport
+                try:
+                        sercom = serial.Serial(testport, 9600, timeout = 0)		#set the name, baud rate, and timout of the serial connection as well as the following settings
+                except:
+                        continue
+                sercom.baudrate=9600
+                sercom.parity = serial.PARITY_NONE
+                sercom.bytesize = serial.EIGHTBITS
+                sercom.stopbits = serial.STOPBITS_ONE
+                sercom.write("test\n")					#send 'test\n' and go into a loop while waiting to see if it is returned
+                print 'Attempting Connection'
+                recieved = ""
+                giveupcounter = 0 
+                while True:
+                    time.sleep(0.2)
+                    recieved += sercom.readline()
+                    giveupcounter += 1
+                    if giveupcounter > 30:
+                        print 'Connection Failed'
+                        break
+                    if recieved == "test\n":
+                        print 'Connection Made'
+                        return sercom
 
 def testserial(sercom,sendstring):
         print "Writing: '" + str(sendstring)+ "'"
@@ -153,9 +159,9 @@ def sendvalues():
         compiledlist.append(convertvalues(wastepwm))
         return compiledlist
         
-def readinput(serial):
-        data = serial.readline()
-        #parse data here
+def decode(string):
+        pass
+        #decode the protocol here and input it into data structures for plotting
 
 def start(serial):
         serial.write('start\n')
@@ -185,7 +191,8 @@ class Example(QtGui.QWidget):
     def __init__(self):
         super(Example, self).__init__()
         self.port = 0
-        
+        self.portopen = False
+        self.started = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(lambda: self.update())
         self.timer.start(1000)
@@ -193,12 +200,15 @@ class Example(QtGui.QWidget):
         self.initUI()
         
     def update(self):
-        global ptr
-        self.plotA.getPlotItem().clear()
-        self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
-        self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
-        ptr += 1
-        print "update"
+        if self.started == True:
+                if self.portopen == True:
+                        decode(self.port.readline())
+                self.plotA.getPlotItem().clear()
+                self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
+                self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
+                self.plotA.setRange(None,(0,1),(0,0.2))
+        
+        
         
         
         
@@ -212,15 +222,15 @@ class Example(QtGui.QWidget):
         for y in range(38):
                 grid.addWidget(QtGui.QLabel(' '),37,y)
         
-        
+        labelStyle = {'color': '#FFF', 'font-size': '8pt'}
         self.plotA = pg.PlotWidget()
         grid.addWidget(self.plotA ,0,2,12,22)
         self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
         self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
-        self.plotA.getPlotItem().setTitle("Reactor A")
-        self.plotA.getPlotItem().setLabel('left', "Percent CO2")
-        self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)")
-        #self.plotA.setRange(None,(10,100),(-1,-20))
+        self.plotA.getPlotItem().setTitle("Reactor A", **labelStyle)
+        self.plotA.getPlotItem().setLabel('left', "Percent CO2", None, **labelStyle)
+        self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
+        self.plotA.setRange(None,(0,1),(0,0.2))
         #print str(QtCore.QDateTime.currentDateTime()).split(' ')                
         
         
@@ -332,6 +342,8 @@ class Example(QtGui.QWidget):
         self.le9 = QtGui.QLineEdit(self)
         self.le9.move(10, 600)
 
+        self.infolist = QtGui.QListWidget(None)
+        grid.addWidget(self.infolist,27,3,1,20)
         ########################################################## 
         self.setLayout(grid)
         #########################################################
@@ -344,11 +356,15 @@ class Example(QtGui.QWidget):
       
         sender = self.sender()
         if sender.text() == "Connect":
+                self.infolist.addItem("Searching for Device")
+                
                 self.port = connectserial()
-                if port != False:
-                        print "connection made"
+                if self.port != False:
+                        
+                        self.infolist.addItem("Connection Made")
+                        self.portopen = True
                 else:
-                        print "connection failed"
+                        self.infolist.addItem("Connection Failed")
         
         if sender.text() == "Export":
                 #export
@@ -367,26 +383,26 @@ class Example(QtGui.QWidget):
                 compiledlist.append(convertvalues(str(self.le8.text()) ))
                 compiledlist.append(convertvalues(str(self.le9.text())))
                 if testserial(self.port,compiledlist):
-                        print "Values Sent"
+                        self.infolist.addItem("Values Sent")
+                        
                 else:
-                        print "Error: Values NOT Sent"
+                        self.infolist.addItem("Error: Values NOT Sent")
         
         if sender.text() == "Start/Stop":
+                self.started = True
                 state = start(self.port)
                 if state == True:
-                        print "Expiriment Started"
+                        self.infolist.addItem("Expiriment Started")
                 elif state == False:
-                        print "Expiriment Stopped"
+                        self.infolist.addItem("Expiriment Stopped")
                 else:
-                        print "Error, Please Retry 'Connect'"
+                        self.infolist.addItem("Error: Please Retry 'Connect'")
         
         
 def main():
     
     app = QtGui.QApplication(sys.argv)
     ex = Example()
-    
-    
     
     sys.exit(app.exec_())
     
@@ -398,14 +414,13 @@ def main():
 
 
 
-if __name__ == '__main__':
-    main()
+
     
 
 ##run##	
 
-'''
-port = connectserial()
-testserial(port, sendvalues())
-'''
+if __name__ == '__main__':
+    main()
+
+
 
