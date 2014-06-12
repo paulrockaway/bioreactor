@@ -24,6 +24,7 @@ ytest = np.array([1,2,3,4,5,6])
 
 port = "/dev/ttyACM0"
 
+ptr = 0
 
 ##Functions for Serial Communication##
 
@@ -184,7 +185,20 @@ class Example(QtGui.QWidget):
     def __init__(self):
         super(Example, self).__init__()
         self.port = 0
+        
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(lambda: self.update())
+        self.timer.start(1000)
+        
         self.initUI()
+        
+    def update(self):
+        global ptr
+        self.plotA.getPlotItem().clear()
+        self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
+        self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
+        ptr += 1
+        print "update"
         
         
         
@@ -193,14 +207,46 @@ class Example(QtGui.QWidget):
        
         grid = QtGui.QGridLayout()
         
+        for x in range(28):
+                grid.addWidget(QtGui.QLabel(' '),x,1)
+        for y in range(38):
+                grid.addWidget(QtGui.QLabel(' '),37,y)
         
-        self.graph = pg.PlotDataItem(xtest,ytest)
-        self.gwidget = pg.PlotWidget()
-        self.gwidget.addItem(self.graph)
-        self.gwidget.move(100,100)
         
-        grid.addWidget(self.gwidget, 0,2,10,10)
-        grid.addWidget(QtGui.QLabel('  '),0,1)
+        self.plotA = pg.PlotWidget()
+        grid.addWidget(self.plotA ,0,2,12,22)
+        self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
+        self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
+        self.plotA.getPlotItem().setTitle("Reactor A")
+        self.plotA.getPlotItem().setLabel('left', "Percent CO2")
+        self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)")
+        #self.plotA.setRange(None,(10,100),(-1,-20))
+        #print str(QtCore.QDateTime.currentDateTime()).split(' ')                
+        
+        
+        self.graphB = pg.PlotDataItem(xtest,ytest)
+        self.gwidgetB = pg.PlotWidget()
+        self.gwidgetB.addItem(self.graphB)
+        
+        grid.addWidget(self.gwidgetB, 0,24,12,20)
+        
+        self.graphC = pg.PlotDataItem(xtest,ytest)
+        self.gwidgetC = pg.PlotWidget()
+        self.gwidgetC.addItem(self.graphC)
+        
+        grid.addWidget(self.gwidgetC, 12,2,14,22)
+        
+        self.graphD = pg.PlotDataItem(xtest,ytest)
+        self.gwidgetD = pg.PlotWidget()
+        self.gwidgetD.addItem(self.graphD)
+        
+        grid.addWidget(self.gwidgetD, 12,24,14,20)
+        
+        
+        grid.addWidget(QtGui.QLabel(''),0,1)
+        
+        exportbtn = QtGui.QPushButton("Export", self)
+        grid.addWidget(exportbtn, 27, 38)
         
         ##########################################################################################
         
@@ -290,7 +336,7 @@ class Example(QtGui.QWidget):
         self.setLayout(grid)
         #########################################################
         
-        self.setGeometry(150, 10, 700, 650)
+        self.setGeometry(150, 10, 700, 640)
         self.setWindowTitle('Bioreactor Expiriment')
         self.show()
         
@@ -303,6 +349,10 @@ class Example(QtGui.QWidget):
                         print "connection made"
                 else:
                         print "connection failed"
+        
+        if sender.text() == "Export":
+                #export
+                pass
         
         if sender.text() == "Send Values":
                 
@@ -335,11 +385,15 @@ def main():
     
     app = QtGui.QApplication(sys.argv)
     ex = Example()
+    
+    
+    
     sys.exit(app.exec_())
     
     
 
-
+#import pyqtgraph.examples
+#pyqtgraph.examples.run()
 
 
 
