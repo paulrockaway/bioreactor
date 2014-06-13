@@ -48,10 +48,6 @@ def serial_ports():
             yield port[0]
 
 
-
-
-
-
 def connectserial():
         '''
         Attempts to make a serial connection with the MSP430
@@ -137,27 +133,6 @@ def convertvalues(string):
                 #error
         return (num / 256, num % 256)
                 
-def sendvalues():
-        '''
-        Converts all the values that need to be sent
-
-        Input:
-        None
-
-        Output:
-        List of tuples of 8 bit numbers
-        '''
-        compiledlist = []
-        compiledlist.append(convertvalues(rct1threshold))
-        compiledlist.append(convertvalues(rct1pwm ))
-        compiledlist.append(convertvalues(rct2threshold))
-        compiledlist.append(convertvalues(rct2pwm ))
-        compiledlist.append(convertvalues(rct3threshold))
-        compiledlist.append(convertvalues(rct3pwm ))
-        compiledlist.append(convertvalues(rct4threshold))
-        compiledlist.append(convertvalues(rct4pwm ))
-        compiledlist.append(convertvalues(wastepwm))
-        return compiledlist
         
 def decode(string):
         pass
@@ -188,7 +163,7 @@ def start(serial):
 
 class Example(QtGui.QWidget):
     
-    def __init__(self):
+    def __init__(self, application):
         super(Example, self).__init__()
         self.port = 0
         self.portopen = False
@@ -196,7 +171,7 @@ class Example(QtGui.QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(lambda: self.update())
         self.timer.start(1000)
-        
+        self.exapp = application
         self.initUI()
         
     def update(self):
@@ -210,27 +185,25 @@ class Example(QtGui.QWidget):
         
         
         
-        
-        
     def initUI(self):      
         ###########################################################################################
        
         grid = QtGui.QGridLayout()
         
-        for x in range(28):
-                grid.addWidget(QtGui.QLabel(' '),x,1)
-        for y in range(38):
-                grid.addWidget(QtGui.QLabel(' '),37,y)
+        #####Plots######
         
         labelStyle = {'color': '#FFF', 'font-size': '8pt'}
+        co2labelStyle = {'color': '#0F0', 'font-size': '8pt'}
         self.plotA = pg.PlotWidget()
-        grid.addWidget(self.plotA ,0,2,12,22)
+        grid.addWidget(self.plotA ,5,0,10,10)
         self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
         self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
         self.plotA.getPlotItem().setTitle("Reactor A", **labelStyle)
-        self.plotA.getPlotItem().setLabel('left', "Percent CO2", None, **labelStyle)
+        self.plotA.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
         self.plotA.setRange(None,(0,1),(0,0.2))
+        
+        
         #print str(QtCore.QDateTime.currentDateTime()).split(' ')                
         
         
@@ -238,117 +211,162 @@ class Example(QtGui.QWidget):
         self.gwidgetB = pg.PlotWidget()
         self.gwidgetB.addItem(self.graphB)
         
-        grid.addWidget(self.gwidgetB, 0,24,12,20)
+        grid.addWidget(self.gwidgetB, 5,10,10,10)
         
         self.graphC = pg.PlotDataItem(xtest,ytest)
         self.gwidgetC = pg.PlotWidget()
         self.gwidgetC.addItem(self.graphC)
         
-        grid.addWidget(self.gwidgetC, 12,2,14,22)
+        grid.addWidget(self.gwidgetC, 15,0,10,10)
         
         self.graphD = pg.PlotDataItem(xtest,ytest)
         self.gwidgetD = pg.PlotWidget()
         self.gwidgetD.addItem(self.graphD)
         
-        grid.addWidget(self.gwidgetD, 12,24,14,20)
+        grid.addWidget(self.gwidgetD, 15,10,10,10)
         
         
-        grid.addWidget(QtGui.QLabel(''),0,1)
+        #####Buttons######
+        
+        connectbtn = QtGui.QPushButton("Connect", self)
+        connectbtn.setGeometry(QtCore.QRect(10,10,80,25))
         
         exportbtn = QtGui.QPushButton("Export", self)
-        grid.addWidget(exportbtn, 27, 38)
+        exportbtn.setGeometry(QtCore.QRect(100,10,80,25))
         
-        ##########################################################################################
+        startbtn = QtGui.QPushButton("Start/Stop", self)
+        startbtn.setGeometry(QtCore.QRect(10,80,80,25))
         
-        btn1 = QtGui.QPushButton("Connect", self)
-        grid.addWidget(btn1,0,0)
-
-        btn2 = QtGui.QPushButton("Send Values", self)
-        grid.addWidget(btn2,1,0)
-
-        btn3 = QtGui.QPushButton("Start/Stop", self)
-        grid.addWidget(btn3,2,0)
-            
-        btn1.clicked.connect(self.buttonClicked)            
-        btn2.clicked.connect(self.buttonClicked)
-        btn3.clicked.connect(self.buttonClicked)
+        sendbtn = QtGui.QPushButton("Send Values", self)
+        sendbtn.setGeometry(QtCore.QRect(10,45,80,25))
+           
+        connectbtn.clicked.connect(self.buttonClicked)            
+        exportbtn.clicked.connect(self.buttonClicked)
+        startbtn.clicked.connect(self.buttonClicked)
+        sendbtn.clicked.connect(self.buttonClicked)
         
-        self.lbl1 = QtGui.QLabel('Reactor A:', self)
-        self.lbl1.move(10, 100)
-
-        self.lbl2 = QtGui.QLabel('  Threashold(%):', self)
-        self.lbl2.move(10, 115)
+        #####Grid Placeholders######
         
-        self.le1 = QtGui.QLineEdit(self)
-        self.le1.move(10, 140)
+        self.spacelbl = QtGui.QLabel(' ')
+        for x in range(5):
+                for y in range(20):
+                        grid.addWidget(self.spacelbl, x,y)
+                        
+        ######Labels########
+        
+        self.wastelbl = QtGui.QLabel('Waste', self)
+        self.wastelbl.move(100, 35)
 
-        self.lbl3 = QtGui.QLabel('  Output(%):', self)
-        self.lbl3.move(10, 165)
+        self.wastepwrlbl = QtGui.QLabel('  Output(%):', self)
+        self.wastepwrlbl.move(100, 50)
+        
+        ##############Reactor A######
+        self.reactorAlbl = QtGui.QLabel('Reactor A:', self)
+        self.reactorAlbl.move(190, -5)
 
-        self.le2 = QtGui.QLineEdit(self)
-        self.le2.move(10, 190)
+        self.reactorAthreshlbl = QtGui.QLabel('Threashold(%):', self)
+        self.reactorAthreshlbl.move(190, 10)
+        
+        self.reactorAonoutlbl = QtGui.QLabel('On Output(%):', self)
+        self.reactorAonoutlbl.move(190, 45)
+        
+        self.reactorAoffoutlbl = QtGui.QLabel('Off Output(%):', self)
+        self.reactorAoffoutlbl.move(190, 80)
+        
+        ###############Reactor B#######
+        
+        self.reactorBlbl = QtGui.QLabel('Reactor B:', self)
+        self.reactorBlbl.move(375, -5)
 
-        self.lbl4 = QtGui.QLabel('Reactor B:', self)
-        self.lbl4.move(10, 215)
+        self.reactorBthreshlbl = QtGui.QLabel('Threashold(%):', self)
+        self.reactorBthreshlbl.move(375, 10)
+        
+        self.reactorBonpwrlbl = QtGui.QLabel('On Output(%):', self)
+        self.reactorBonpwrlbl.move(375, 45)
+        
+        self.reactorBoffpwrlbl = QtGui.QLabel('Off Output(%):', self)
+        self.reactorBoffpwrlbl.move(375, 80)
+        
+        ###############Reactor C#######
+        self.reactorClbl = QtGui.QLabel('Reactor C:', self)
+        self.reactorClbl.move(560, -5)
 
-        self.lbl5 = QtGui.QLabel('  Threashold(%):', self)
-        self.lbl5.move(10, 230)
+        self.reactorCthreshlbl = QtGui.QLabel('Threashold(%):', self)
+        self.reactorCthreshlbl.move(560, 10)
+        
+        self.reactorConpwrlbl = QtGui.QLabel('On Output(%):', self)
+        self.reactorConpwrlbl.move(560, 45)
+        
+        self.reactorCoffpwrlbl = QtGui.QLabel('Off Output(%):', self)
+        self.reactorCoffpwrlbl.move(560, 80)
+        
+        ################Reactor D#######
+        
+        self.reactorDlbl = QtGui.QLabel('Reactor D:', self)
+        self.reactorDlbl.move(745, -5)
 
-        self.le3 = QtGui.QLineEdit(self)
-        self.le3.move(10, 255)
+        self.reactorDthreshlbl = QtGui.QLabel('Threashold(%):', self)
+        self.reactorDthreshlbl.move(745, 10)
 
-        self.lbl6 = QtGui.QLabel('  Output(%):', self)
-        self.lbl6.move(10, 280)
+        self.reactorDonpwrlbl = QtGui.QLabel('On Output(%):', self)
+        self.reactorDonpwrlbl.move(745, 45)
+        
+        self.reactorDoffpwrlbl = QtGui.QLabel('Off Output(%):', self)
+        self.reactorDoffpwrlbl.move(745, 80)
 
-        self.le4 = QtGui.QLineEdit(self)
-        self.le4.move(10, 305)
+        ######Line Edits######
 
-        self.lbl7 = QtGui.QLabel('Reactor C:', self)
-        self.lbl7.move(10, 330)
+        self.wastele = QtGui.QLineEdit(self)
+        self.wastele.setGeometry(QtCore.QRect(100,80,80,25))
+        
+        ##############Reactor A#######
+        self.reactorAthreshle = QtGui.QLineEdit(self)
+        self.reactorAthreshle.setGeometry(QtCore.QRect(285,10,80,25))
 
-        self.lbl8 = QtGui.QLabel('  Threashold(%):', self)
-        self.lbl8.move(10, 345)
+        self.reactorAonoutle = QtGui.QLineEdit(self)
+        self.reactorAonoutle.setGeometry(QtCore.QRect(285,45,80,25))
+        
+        self.reactorAoffoutle = QtGui.QLineEdit(self)
+        self.reactorAoffoutle.setGeometry(QtCore.QRect(285,80,80,25))
+        
+        ################Reactor B#######
+        self.reactorBthreshle = QtGui.QLineEdit(self)
+        self.reactorBthreshle.setGeometry(QtCore.QRect(470,10,80,25))
 
-        self.le5 = QtGui.QLineEdit(self)
-        self.le5.move(10, 370)
+        self.reactorBonpwrle = QtGui.QLineEdit(self)
+        self.reactorBonpwrle.setGeometry(QtCore.QRect(470,45,80,25))
+        
+        self.reactorBoffpwrle = QtGui.QLineEdit(self)
+        self.reactorBoffpwrle.setGeometry(QtCore.QRect(470,80,80,25))
+        
+        ################Reactor C#######
+        
+        self.reactorCthreshle = QtGui.QLineEdit(self)
+        self.reactorCthreshle.setGeometry(QtCore.QRect(655,10,80,25))
 
-        self.lbl9 = QtGui.QLabel('  Output(%):', self)
-        self.lbl9.move(10, 395)
-
-        self.le6 = QtGui.QLineEdit(self)
-        self.le6.move(10, 420)
-
-        self.lbl10 = QtGui.QLabel('Reactor B:', self)
-        self.lbl10.move(10, 445)
-
-        self.lbl11 = QtGui.QLabel('  Threashold(%):', self)
-        self.lbl11.move(10, 460)
-
-        self.le7 = QtGui.QLineEdit(self)
-        self.le7.move(10, 485)
-
-        self.lbl12 = QtGui.QLabel('  Output(%):', self)
-        self.lbl12.move(10, 510)
-
-        self.le8 = QtGui.QLineEdit(self)
-        self.le8.move(10, 535)
-
-        self.lbl13 = QtGui.QLabel('Waste:', self)
-        self.lbl13.move(10, 560)
-
-        self.lbl14 = QtGui.QLabel('  Output(%):', self)
-        self.lbl14.move(10, 575)
-
-        self.le9 = QtGui.QLineEdit(self)
-        self.le9.move(10, 600)
-
-        self.infolist = QtGui.QListWidget(None)
-        grid.addWidget(self.infolist,27,3,1,20)
-        ########################################################## 
+        self.reactorConpwrle = QtGui.QLineEdit(self)
+        self.reactorConpwrle.setGeometry(QtCore.QRect(655,45,80,25))
+        
+        self.reactorCoffpwrle = QtGui.QLineEdit(self)
+        self.reactorCoffpwrle.setGeometry(QtCore.QRect(655,80,80,25))
+        
+        ################Reactor D#######
+        
+        self.reactorDthreshle = QtGui.QLineEdit(self)
+        self.reactorDthreshle.setGeometry(QtCore.QRect(840,10,80,25))
+        
+        self.reactorDonpwrle = QtGui.QLineEdit(self)
+        self.reactorDonpwrle.setGeometry(QtCore.QRect(840,45,80,25))
+        
+        self.reactorDoffpwrle = QtGui.QLineEdit(self)
+        self.reactorDoffpwrle.setGeometry(QtCore.QRect(840,80,80,25))
+       
+       
+        
+        ######Layout########
         self.setLayout(grid)
-        #########################################################
         
-        self.setGeometry(150, 10, 700, 640)
+        self.setGeometry(50, 10, 930, 700)
         self.setWindowTitle('Bioreactor Expiriment')
         self.show()
         
@@ -356,15 +374,13 @@ class Example(QtGui.QWidget):
       
         sender = self.sender()
         if sender.text() == "Connect":
-                self.infolist.addItem("Searching for Device")
-                
                 self.port = connectserial()
                 if self.port != False:
                         
-                        self.infolist.addItem("Connection Made")
+                        print "Connection Made"
                         self.portopen = True
                 else:
-                        self.infolist.addItem("Connection Failed")
+                        print "Connection Failed"
         
         if sender.text() == "Export":
                 #export
@@ -373,36 +389,41 @@ class Example(QtGui.QWidget):
         if sender.text() == "Send Values":
                 
                 compiledlist = []
-                compiledlist.append(convertvalues(str(self.le1.text())))
-                compiledlist.append(convertvalues(str(self.le2.text()) ))
-                compiledlist.append(convertvalues(str(self.le3.text())))
-                compiledlist.append(convertvalues(str(self.le4.text()) ))
-                compiledlist.append(convertvalues(str(self.le5.text())))
-                compiledlist.append(convertvalues(str(self.le6.text()) ))
-                compiledlist.append(convertvalues(str(self.le7.text())))
-                compiledlist.append(convertvalues(str(self.le8.text()) ))
-                compiledlist.append(convertvalues(str(self.le9.text())))
+                compiledlist.append(convertvalues(str(self.reactorAthreshle.text())))
+                compiledlist.append(convertvalues(str(self.reactorAonoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorAoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorBthreshle.text())))
+                compiledlist.append(convertvalues(str(self.reactorBonpwrle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorBoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorCthreshle.text())))
+                compiledlist.append(convertvalues(str(self.reactorConpwrle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorCoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorDthreshle.text())))
+                compiledlist.append(convertvalues(str(self.reactorDonpwrle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorDoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.wastele.text())))
                 if testserial(self.port,compiledlist):
-                        self.infolist.addItem("Values Sent")
+                        print "Values Sent"
                         
                 else:
-                        self.infolist.addItem("Error: Values NOT Sent")
+                        print "Error: Values NOT Sent"
         
         if sender.text() == "Start/Stop":
                 self.started = True
                 state = start(self.port)
                 if state == True:
-                        self.infolist.addItem("Expiriment Started")
+                        print "Expiriment Started"
                 elif state == False:
-                        self.infolist.addItem("Expiriment Stopped")
+                        print "Expiriment Stopped"
                 else:
-                        self.infolist.addItem("Error: Please Retry 'Connect'")
+                        print "Error: Please Retry 'Connect'"
+                        
         
         
 def main():
     
     app = QtGui.QApplication(sys.argv)
-    ex = Example()
+    ex = Example(app)
     
     sys.exit(app.exec_())
     
