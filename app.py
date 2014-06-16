@@ -16,11 +16,9 @@ import sys
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 import pyqtgraph as pg
+import xlwt
 
 ##Variables##
-
-xtest = np.array([0,1,3,4.5,7,10])
-ytest = np.array([1,2,3,4,5,6])
 
 
 
@@ -223,8 +221,8 @@ class mainWindow(QtGui.QWidget):
                                         self.reactorAtime.append(self.getTime())
                                         
                                         self.plotA.getPlotItem().clear()
-                                        self.plotA.plot(list(x/60 for x in self.reactorAtime), self.reactorAco2, pen=(0,255,0))
-                                        self.plotA.plot(ist(x/60 for x in self.reactorAtime),self.reactorApwr, pen=(255,0,0))
+                                        self.plotA.plot(list(x/3600 for x in self.reactorAtime), self.reactorAco2, pen=(0,255,0))
+                                        self.plotA.plot(ist(x/3600 for x in self.reactorAtime),self.reactorApwr, pen=(255,0,0))
                                         self.plotA.setRange(None,(0,1),(0,1))
                                 elif label == 'B':
                                         reactorBco2.append(co2)
@@ -232,8 +230,8 @@ class mainWindow(QtGui.QWidget):
                                         self.reactorBtime.append(self.getTime())
                                         
                                         self.plotB.getPlotItem().clear()
-                                        self.plotB.plot(list(x/60 for x in self.reactorBtime), self.reactorBco2, pen=(0,255,0))
-                                        self.plotB.plot(ist(x/60 for x in self.reactorBtime),self.reactorBpwr, pen=(255,0,0))
+                                        self.plotB.plot(list(x/3600 for x in self.reactorBtime), self.reactorBco2, pen=(0,255,0))
+                                        self.plotB.plot(ist(x/3600 for x in self.reactorBtime),self.reactorBpwr, pen=(255,0,0))
                                         self.plotB.setRange(None,(0,1),(0,1))
                                 elif label == 'C':
                                         reactorCco2.append(co2)
@@ -241,8 +239,8 @@ class mainWindow(QtGui.QWidget):
                                         self.reactorCtime.append(self.getTime())
                                         
                                         self.plotC.getPlotItem().clear()
-                                        self.plotC.plot(list(x/60 for x in self.reactorCtime), self.reactorCco2, pen=(0,255,0))
-                                        self.plotC.plot(ist(x/60 for x in self.reactorCtime),self.reactorCpwr, pen=(255,0,0))
+                                        self.plotC.plot(list(x/3600 for x in self.reactorCtime), self.reactorCco2, pen=(0,255,0))
+                                        self.plotC.plot(ist(x/3600 for x in self.reactorCtime),self.reactorCpwr, pen=(255,0,0))
                                         self.plotC.setRange(None,(0,1),(0,1))
                                 elif label == 'D':
                                         reactorDco2.append(co2)
@@ -250,13 +248,19 @@ class mainWindow(QtGui.QWidget):
                                         self.reactorDtime.append(self.getTime())
                                         
                                         self.plotD.getPlotItem().clear()
-                                        self.plotD.plot(list(x/60 for x in self.reactorDtime), self.reactorDco2, pen=(0,255,0))
-                                        self.plotD.plot(ist(x/60 for x in self.reactorDtime),self.reactorDpwr, pen=(255,0,0))
+                                        self.plotD.plot(list(x/3600 for x in self.reactorDtime), self.reactorDco2, pen=(0,255,0))
+                                        self.plotD.plot(ist(x/3600 for x in self.reactorDtime),self.reactorDpwr, pen=(255,0,0))
                                         self.plotD.setRange(None,(0,1),(0,1))
                                         
                 
         
-    
+    def export(self):
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet('Bioreactor Results')
+        #ws.write(y,x,data)
+        
+        
+        wb.save('Data.xls')
         
     def initUI(self):      
         
@@ -462,8 +466,8 @@ class mainWindow(QtGui.QWidget):
                         errormessage("Connection Failed")
         
         if sender.text() == "Export":
-                #export
-                pass
+                self.export()
+                self.showMessage("Data Exported")
         
         if sender.text() == "Send Values":
                 
