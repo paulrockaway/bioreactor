@@ -47,6 +47,10 @@ def serial_ports():
         for port in list_ports.comports():
             yield port[0]
 
+def errormessage(error):
+        err = QtGui.QMessageBox()
+        err.setText(error)
+        err.exec_()
 
 def connectserial():
         '''
@@ -79,10 +83,10 @@ def connectserial():
                     recieved += sercom.readline()
                     giveupcounter += 1
                     if giveupcounter > 30:
-                        print 'Connection Failed'
+                        #'Connection Failed')
                         break
                     if recieved == "test\n":
-                        print 'Connection Made'
+                        #'Connection Made'
                         return sercom
 
 def testserial(sercom,sendstring):
@@ -96,10 +100,10 @@ def testserial(sercom,sendstring):
                 print testrecieved
                 donecounter +=1
                 if donecounter > 30:
-                        print "error"
+                        errormessage("Connection did not Respond")
                         return False
                 if testrecieved == str(sendstring):
-                        print "correct"
+                        #"correct"
                         return True
 
 
@@ -129,8 +133,7 @@ def convertvalues(string):
                 string += '00'
         num = int(string)
         if num > 10000 or num < 0:
-                print "Error, input percent not acceptable"
-                #error
+                errormessage("Error, input percent not acceptable")
         return (num / 256, num % 256)
                 
         
@@ -147,7 +150,7 @@ def start(serial):
             recieved += serial.readline()
             giveupcounter += 1
             if giveupcounter > 30:
-                print 'Connection Failed'
+                errormessage('Connection Failed')
                 return 'Error'
             if recieved == "start\n": 
                 print 'Started'
@@ -160,7 +163,6 @@ def start(serial):
 ##Functions for GUI##
 
 
-
 class Example(QtGui.QWidget):
     
     def __init__(self, application):
@@ -168,6 +170,8 @@ class Example(QtGui.QWidget):
         self.port = 0
         self.portopen = False
         self.started = False
+        self.time = []
+        
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(lambda: self.update())
         self.timer.start(1000)
@@ -177,13 +181,14 @@ class Example(QtGui.QWidget):
     def update(self):
         if self.started == True:
                 if self.portopen == True:
-                        decode(self.port.readline())
+                        if self.port.inWaiting() > 0:
+                                decode(self.port.readline())
                 self.plotA.getPlotItem().clear()
                 self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
                 self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
                 self.plotA.setRange(None,(0,1),(0,0.2))
         
-        
+    
         
     def initUI(self):      
         ###########################################################################################
@@ -202,9 +207,6 @@ class Example(QtGui.QWidget):
         self.plotA.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
         self.plotA.setRange(None,(0,1),(0,0.2))
-        
-        
-        #print str(QtCore.QDateTime.currentDateTime()).split(' ')                
         
         
         self.graphB = pg.PlotDataItem(xtest,ytest)
@@ -254,6 +256,9 @@ class Example(QtGui.QWidget):
                         
         ######Labels########
         
+        self.messagelbl = QtGui.QLabel('Initialized',self)
+        grid.addWidget(self.messagelbl, 25,0,1,20)
+        
         self.wastelbl = QtGui.QLabel('Waste', self)
         self.wastelbl.move(100, 35)
 
@@ -267,11 +272,11 @@ class Example(QtGui.QWidget):
         self.reactorAthreshlbl = QtGui.QLabel('Threashold(%):', self)
         self.reactorAthreshlbl.move(190, 10)
         
-        self.reactorAonoutlbl = QtGui.QLabel('On Output(%):', self)
-        self.reactorAonoutlbl.move(190, 45)
+        self.reactorAonpwrlbl = QtGui.QLabel('On Output(%):', self)
+        self.reactorAonpwrlbl.move(190, 45)
         
-        self.reactorAoffoutlbl = QtGui.QLabel('Off Output(%):', self)
-        self.reactorAoffoutlbl.move(190, 80)
+        self.reactorAoffpwrlbl = QtGui.QLabel('Off Output(%):', self)
+        self.reactorAoffpwrlbl.move(190, 80)
         
         ###############Reactor B#######
         
@@ -323,11 +328,11 @@ class Example(QtGui.QWidget):
         self.reactorAthreshle = QtGui.QLineEdit(self)
         self.reactorAthreshle.setGeometry(QtCore.QRect(285,10,80,25))
 
-        self.reactorAonoutle = QtGui.QLineEdit(self)
-        self.reactorAonoutle.setGeometry(QtCore.QRect(285,45,80,25))
+        self.reactorAonpwrle = QtGui.QLineEdit(self)
+        self.reactorAonpwrle.setGeometry(QtCore.QRect(285,45,80,25))
         
-        self.reactorAoffoutle = QtGui.QLineEdit(self)
-        self.reactorAoffoutle.setGeometry(QtCore.QRect(285,80,80,25))
+        self.reactorAoffpwrle = QtGui.QLineEdit(self)
+        self.reactorAoffpwrle.setGeometry(QtCore.QRect(285,80,80,25))
         
         ################Reactor B#######
         self.reactorBthreshle = QtGui.QLineEdit(self)
@@ -369,6 +374,9 @@ class Example(QtGui.QWidget):
         self.setGeometry(50, 10, 930, 700)
         self.setWindowTitle('Bioreactor Expiriment')
         self.show()
+    
+    def showMessage(self, mesg):
+        self.messagelbl.setText(mesg)
         
     def buttonClicked(self):
       
@@ -376,11 +384,15 @@ class Example(QtGui.QWidget):
         if sender.text() == "Connect":
                 self.port = connectserial()
                 if self.port != False:
+                        print "connection made"
                         
-                        print "Connection Made"
+                        self.showMessage("Connection Made")
+                        
+                        
                         self.portopen = True
                 else:
-                        print "Connection Failed"
+                        
+                        errormessage("Connection Failed")
         
         if sender.text() == "Export":
                 #export
@@ -390,33 +402,40 @@ class Example(QtGui.QWidget):
                 
                 compiledlist = []
                 compiledlist.append(convertvalues(str(self.reactorAthreshle.text())))
-                compiledlist.append(convertvalues(str(self.reactorAonoutle.text()) ))
-                compiledlist.append(convertvalues(str(self.reactorAoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorAonpwrle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorAoffpwrle.text()) ))
                 compiledlist.append(convertvalues(str(self.reactorBthreshle.text())))
                 compiledlist.append(convertvalues(str(self.reactorBonpwrle.text()) ))
-                compiledlist.append(convertvalues(str(self.reactorBoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorBoffpwrle.text()) ))
                 compiledlist.append(convertvalues(str(self.reactorCthreshle.text())))
                 compiledlist.append(convertvalues(str(self.reactorConpwrle.text()) ))
-                compiledlist.append(convertvalues(str(self.reactorCoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorCoffpwrle.text()) ))
                 compiledlist.append(convertvalues(str(self.reactorDthreshle.text())))
                 compiledlist.append(convertvalues(str(self.reactorDonpwrle.text()) ))
-                compiledlist.append(convertvalues(str(self.reactorDoffoutle.text()) ))
+                compiledlist.append(convertvalues(str(self.reactorDoffpwrle.text()) ))
                 compiledlist.append(convertvalues(str(self.wastele.text())))
-                if testserial(self.port,compiledlist):
-                        print "Values Sent"
+                sendstring = ""
+                for tupleitem in compiledlist:
+                        sendstring += str(tupleitem[0]) + ':' + str(tupleitem[1])+ ','
+                sendstring = sendstring[:-1] + '\n'
+                if testserial(self.port,sendstring):
+                        self.showMessage("Values Sent")
                         
                 else:
-                        print "Error: Values NOT Sent"
+                        errormessage("Error: Values NOT Sent")
         
         if sender.text() == "Start/Stop":
                 self.started = True
+                self.time = list(int(x) for x in str(QtCore.QDateTime.currentDateTime())[23:-1].split(', ')[:-1])
                 state = start(self.port)
                 if state == True:
-                        print "Expiriment Started"
+                        
+                        self.showMessage("Expiriment Started")
                 elif state == False:
-                        print "Expiriment Stopped"
+                        
+                        self.showMessage("Expiriment Stopped")
                 else:
-                        print "Error: Please Retry 'Connect'"
+                        errormessage("Error: Please Retry 'Connect'")
                         
         
         
@@ -433,10 +452,6 @@ def main():
 #pyqtgraph.examples.run()
 
 
-
-
-
-    
 
 ##run##	
 
