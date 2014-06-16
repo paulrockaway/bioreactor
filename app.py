@@ -138,8 +138,11 @@ def convertvalues(string):
                 
         
 def decode(string):
-        pass
-        #decode the protocol here and input it into data structures for plotting
+        
+        co2 = string[1]* 256 + string[2]
+        pwr = string[3] *256 + string[4]
+        return (string[0], co2, pwr)
+        
 
 def start(serial):
         serial.write('start\n')
@@ -153,45 +156,110 @@ def start(serial):
                 errormessage('Connection Failed')
                 return 'Error'
             if recieved == "start\n": 
-                print 'Started'
+                
                 return True
             if recieved == "stop\n":
-                print 'Stopped'
+                
                 return False
         
+
 
 ##Functions for GUI##
 
 
-class Example(QtGui.QWidget):
+class mainWindow(QtGui.QWidget):
     
     def __init__(self, application):
-        super(Example, self).__init__()
+        super(mainWindow, self).__init__()
+        
+        #### Reactor Results ####
+        self.reactorAco2 = []
+        self.reactorBco2 = []
+        self.reactorCco2 = []
+        self.reactorDco2 = []
+        
+        self.reactorApwr = []
+        self.reactorBpwr = []
+        self.reactorCpwr = []
+        self.reactorDpwr = []
+        
+        self.reactorAtime = []
+        self.reactorBtime = []
+        self.reactorCtime = []
+        self.reactorDtime = []
+        
+        self.wastepwr = []
+        self.wastetime = []
+        
+        
+        #### Other Stuff ####
         self.port = 0
         self.portopen = False
         self.started = False
-        self.time = []
-        
+        self.time = QtCore.QTime()
+        self.timecounter = 0
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(lambda: self.update())
         self.timer.start(1000)
         self.exapp = application
         self.initUI()
+    
+    def getTime(self):
+        self.timecounter += self.time.elapsed()/1000
+        self.time.restart()
+        return self.timecounter
         
     def update(self):
         if self.started == True:
                 if self.portopen == True:
                         if self.port.inWaiting() > 0:
-                                decode(self.port.readline())
-                self.plotA.getPlotItem().clear()
-                self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
-                self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
-                self.plotA.setRange(None,(0,1),(0,0.2))
+                                label, co2, pwr = decode(self.port.readline())
+                                if label == 'W':
+                                        wastepwr.append(pwr)
+                                        self.wastetime.append(self.getTime())
+                                elif label == 'A':
+                                        reactorAco2.append(co2)
+                                        reactorApwr.append(pwr)
+                                        self.reactorAtime.append(self.getTime())
+                                        
+                                        self.plotA.getPlotItem().clear()
+                                        self.plotA.plot(list(x/60 for x in self.reactorAtime), self.reactorAco2, pen=(0,255,0))
+                                        self.plotA.plot(ist(x/60 for x in self.reactorAtime),self.reactorApwr, pen=(255,0,0))
+                                        self.plotA.setRange(None,(0,1),(0,1))
+                                elif label == 'B':
+                                        reactorBco2.append(co2)
+                                        reactorBpwr.append(pwr)
+                                        self.reactorBtime.append(self.getTime())
+                                        
+                                        self.plotB.getPlotItem().clear()
+                                        self.plotB.plot(list(x/60 for x in self.reactorBtime), self.reactorBco2, pen=(0,255,0))
+                                        self.plotB.plot(ist(x/60 for x in self.reactorBtime),self.reactorBpwr, pen=(255,0,0))
+                                        self.plotB.setRange(None,(0,1),(0,1))
+                                elif label == 'C':
+                                        reactorCco2.append(co2)
+                                        reactorCpwr.append(pwr)
+                                        self.reactorCtime.append(self.getTime())
+                                        
+                                        self.plotC.getPlotItem().clear()
+                                        self.plotC.plot(list(x/60 for x in self.reactorCtime), self.reactorCco2, pen=(0,255,0))
+                                        self.plotC.plot(ist(x/60 for x in self.reactorCtime),self.reactorCpwr, pen=(255,0,0))
+                                        self.plotC.setRange(None,(0,1),(0,1))
+                                elif label == 'D':
+                                        reactorDco2.append(co2)
+                                        reactorDpwr.append(pwr)
+                                        self.reactorDtime.append(self.getTime())
+                                        
+                                        self.plotD.getPlotItem().clear()
+                                        self.plotD.plot(list(x/60 for x in self.reactorDtime), self.reactorDco2, pen=(0,255,0))
+                                        self.plotD.plot(ist(x/60 for x in self.reactorDtime),self.reactorDpwr, pen=(255,0,0))
+                                        self.plotD.setRange(None,(0,1),(0,1))
+                                        
+                
         
     
         
     def initUI(self):      
-        ###########################################################################################
+        
        
         grid = QtGui.QGridLayout()
         
@@ -201,31 +269,31 @@ class Example(QtGui.QWidget):
         co2labelStyle = {'color': '#0F0', 'font-size': '8pt'}
         self.plotA = pg.PlotWidget()
         grid.addWidget(self.plotA ,5,0,10,10)
-        self.plotA.plot(np.random.normal(size=100), pen=(255,0,0))
-        self.plotA.plot(np.random.normal(size=100), pen=(0,255,0))
         self.plotA.getPlotItem().setTitle("Reactor A", **labelStyle)
         self.plotA.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
         self.plotA.setRange(None,(0,1),(0,0.2))
         
+        self.plotB = pg.PlotWidget()
+        grid.addWidget(self.plotB ,5,10,10,10)
+        self.plotB.getPlotItem().setTitle("Reactor B", **labelStyle)
+        self.plotB.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
+        self.plotB.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
+        self.plotB.setRange(None,(0,1),(0,0.2))
         
-        self.graphB = pg.PlotDataItem(xtest,ytest)
-        self.gwidgetB = pg.PlotWidget()
-        self.gwidgetB.addItem(self.graphB)
+        self.plotC = pg.PlotWidget()
+        grid.addWidget(self.plotC ,15,0,10,10)
+        self.plotC.getPlotItem().setTitle("Reactor C", **labelStyle)
+        self.plotC.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
+        self.plotC.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
+        self.plotC.setRange(None,(0,1),(0,0.2))
         
-        grid.addWidget(self.gwidgetB, 5,10,10,10)
-        
-        self.graphC = pg.PlotDataItem(xtest,ytest)
-        self.gwidgetC = pg.PlotWidget()
-        self.gwidgetC.addItem(self.graphC)
-        
-        grid.addWidget(self.gwidgetC, 15,0,10,10)
-        
-        self.graphD = pg.PlotDataItem(xtest,ytest)
-        self.gwidgetD = pg.PlotWidget()
-        self.gwidgetD.addItem(self.graphD)
-        
-        grid.addWidget(self.gwidgetD, 15,10,10,10)
+        self.plotD = pg.PlotWidget()
+        grid.addWidget(self.plotD ,15,10,10,10)
+        self.plotD.getPlotItem().setTitle("Reactor D", **labelStyle)
+        self.plotD.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
+        self.plotD.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
+        self.plotD.setRange(None,(0,1),(0,0.2))
         
         
         #####Buttons######
@@ -367,7 +435,6 @@ class Example(QtGui.QWidget):
         self.reactorDoffpwrle.setGeometry(QtCore.QRect(840,80,80,25))
        
        
-        
         ######Layout########
         self.setLayout(grid)
         
@@ -426,7 +493,7 @@ class Example(QtGui.QWidget):
         
         if sender.text() == "Start/Stop":
                 self.started = True
-                self.time = list(int(x) for x in str(QtCore.QDateTime.currentDateTime())[23:-1].split(', ')[:-1])
+                self.time.start()
                 state = start(self.port)
                 if state == True:
                         
@@ -442,15 +509,9 @@ class Example(QtGui.QWidget):
 def main():
     
     app = QtGui.QApplication(sys.argv)
-    ex = Example(app)
-    
+    ex = mainWindow(app)
     sys.exit(app.exec_())
     
-    
-
-#import pyqtgraph.examples
-#pyqtgraph.examples.run()
-
 
 
 ##run##	
