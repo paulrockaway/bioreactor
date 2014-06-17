@@ -2,7 +2,7 @@
 Application for Monitoring and Controlling up to 4 Bioreactors
 Devleoped by Paul Rockaway (paulrockaway@gmail.com) for Shamoo Lab @ Rice University
 This application interacts with a TI MSP430G2553 Launchpad that controls 8 pumps
-and reads the CO2 levels in each bioreactor from a gas analyzer
+and reads the CO2 levels in each bioreactor from a gas analyzer using a manifold
 In deveopment as of 6-17-14
 '''
 
@@ -64,7 +64,7 @@ def connectserial():
         '''
                 
         for testport in serial_ports():       
-                print testport
+                
                 try:
                         sercom = serial.Serial(testport, 9600, timeout = 0)		#set the name, baud rate, and timout of the serial connection as well as the following settings
                 except:
@@ -74,11 +74,11 @@ def connectserial():
                 sercom.bytesize = serial.EIGHTBITS
                 sercom.stopbits = serial.STOPBITS_ONE
                 sercom.write("test\n")					#send 'test\n' and go into a loop while waiting to see if it is returned
-                print 'Attempting Connection'
+                
                 recieved = ""
                 giveupcounter = 0 
                 while True:
-                    time.sleep(0.2)
+                    time.sleep(0.01)
                     recieved += sercom.readline()
                     giveupcounter += 1
                     if giveupcounter > 30:
@@ -100,14 +100,14 @@ def testserial(sercom,sendstring):
         True if the connection is working
         False if the connection is not working
         '''
-        print "Writing: '" + str(sendstring)+ "'"
+        
         sercom.write(str(sendstring))
         testrecieved = ""
         donecounter = 0
         while True:
-                time.sleep(1)
+                time.sleep(.01)
                 testrecieved += sercom.readline()
-                print testrecieved
+                
                 donecounter +=1
                 if donecounter > 30:
                         errormessage("Connection did not Respond")
@@ -134,7 +134,11 @@ def convertvalues(string):
                         break
         if decimalflag:	
                 stringlist = string.split('.')				#split string at the decimal place
-                if len(stringlist[1]) == 1:
+                if len(stringlist[1]) > 2:
+                        stringlist[1] = stringlist[1][:2]
+                        string = stringlist[0] + stringlist[1]
+                        errormessage("More than 2 decimal places is not\nsupported, removing extra digits.")
+                elif len(stringlist[1]) == 1:
                         stringlist[1] += '0'
                         string = stringlist[0]+stringlist[1]
                 else:
@@ -594,7 +598,7 @@ class mainWindow(QtGui.QWidget):
        
         ######Layout########
         self.setLayout(grid)
-        
+        self.setWindowIcon(QtGui.QIcon('test_icon.png'))
         self.setGeometry(50, 10, 930, 700)
         self.setWindowTitle('Bioreactor Expiriment')
         self.show()
@@ -625,7 +629,7 @@ class mainWindow(QtGui.QWidget):
         if sender.text() == "Connect":
                 self.port = connectserial()
                 if self.port != False:
-                        print "connection made"
+                        
                         
                         self.showMessage("Connection Made")
                         
@@ -657,7 +661,7 @@ class mainWindow(QtGui.QWidget):
                 compiledlist.append(convertvalues(str(self.wastele.text())))
                 sendstring = ""
                 for tupleitem in compiledlist:
-                        sendstring += str(tupleitem[0]) + ':' + str(tupleitem[1])+ ','
+                        sendstring += chr(tupleitem[0])  + chr(tupleitem[1])
                 sendstring = sendstring[:-1] + '\n'
                 if testserial(self.port,sendstring):
                         self.showMessage("Values Sent")
