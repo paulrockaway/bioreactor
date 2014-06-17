@@ -160,7 +160,17 @@ def start(serial):
                 
                 return False
         
-
+def timeConvert(qttime):
+        timenumlist = str(qttime)[23:-1].split(', ')
+        timestrlist = []
+        for datenum in timenumlist:
+                if len(datenum) < 2:
+                        timestrlist.append('0'+datenum)
+                else:
+                        timestrlist.append(datenum)
+        
+        return timestrlist[1] + '-' + timestrlist[2] + '-' + timestrlist[0] + ' at ' + timestrlist[3] + ':' + timestrlist[4] + ':' + timestrlist[5]
+        
 
 ##Functions for GUI##
 
@@ -191,6 +201,8 @@ class mainWindow(QtGui.QWidget):
         
         
         #### Other Stuff ####
+        self.startdate = ''
+        self.enddate = ''
         self.port = 0
         self.portopen = False
         self.started = False
@@ -222,7 +234,7 @@ class mainWindow(QtGui.QWidget):
                                         
                                         self.plotA.getPlotItem().clear()
                                         self.plotA.plot(list(x/3600 for x in self.reactorAtime), self.reactorAco2, pen=(0,255,0))
-                                        self.plotA.plot(ist(x/3600 for x in self.reactorAtime),self.reactorApwr, pen=(255,0,0))
+                                        self.plotA.plot(list(x/3600 for x in self.reactorAtime),self.reactorApwr, pen=(255,0,0))
                                         self.plotA.setRange(None,(0,1),(0,1))
                                 elif label == 'B':
                                         reactorBco2.append(co2)
@@ -231,7 +243,7 @@ class mainWindow(QtGui.QWidget):
                                         
                                         self.plotB.getPlotItem().clear()
                                         self.plotB.plot(list(x/3600 for x in self.reactorBtime), self.reactorBco2, pen=(0,255,0))
-                                        self.plotB.plot(ist(x/3600 for x in self.reactorBtime),self.reactorBpwr, pen=(255,0,0))
+                                        self.plotB.plot(list(x/3600 for x in self.reactorBtime),self.reactorBpwr, pen=(255,0,0))
                                         self.plotB.setRange(None,(0,1),(0,1))
                                 elif label == 'C':
                                         reactorCco2.append(co2)
@@ -240,7 +252,7 @@ class mainWindow(QtGui.QWidget):
                                         
                                         self.plotC.getPlotItem().clear()
                                         self.plotC.plot(list(x/3600 for x in self.reactorCtime), self.reactorCco2, pen=(0,255,0))
-                                        self.plotC.plot(ist(x/3600 for x in self.reactorCtime),self.reactorCpwr, pen=(255,0,0))
+                                        self.plotC.plot(list(x/3600 for x in self.reactorCtime),self.reactorCpwr, pen=(255,0,0))
                                         self.plotC.setRange(None,(0,1),(0,1))
                                 elif label == 'D':
                                         reactorDco2.append(co2)
@@ -249,7 +261,7 @@ class mainWindow(QtGui.QWidget):
                                         
                                         self.plotD.getPlotItem().clear()
                                         self.plotD.plot(list(x/3600 for x in self.reactorDtime), self.reactorDco2, pen=(0,255,0))
-                                        self.plotD.plot(ist(x/3600 for x in self.reactorDtime),self.reactorDpwr, pen=(255,0,0))
+                                        self.plotD.plot(list(x/3600 for x in self.reactorDtime),self.reactorDpwr, pen=(255,0,0))
                                         self.plotD.setRange(None,(0,1),(0,1))
                                         
                 
@@ -257,6 +269,66 @@ class mainWindow(QtGui.QWidget):
     def export(self):
         wb = xlwt.Workbook()
         ws = wb.add_sheet('Bioreactor Results')
+        if self.startdate != '':
+                ws.write(0,0, 'Expiriment begun on ' + timeConvert(self.startdate))
+        else:
+                ws.write(0,0, 'No start date found')
+        if self.enddate != '':
+                ws.write(1,0, 'Expiriment concluded on '+ timeConvert(self.enddate))
+        else:
+                ws.write(1,0, 'No end date found')
+                
+        ws.write(3,0, 'Reactor A:')
+        ws.write(4, 0, 'Time (s):')
+        ws.write(4, 1, '% CO2:')
+        ws.write(4, 2, '% Output:')
+        for x in range(len(self.reactorAtime)):
+                ws.write(x+5,0,self.reactorAtime[x])
+        for x in range(len(self.reactorAco2)):
+                ws.write(x+5,1,self.reactorAco2[x])
+        for x in range(len(self.reactorApwr)):
+                ws.write(x+5,2,self.reactorApwr[x])
+        
+        ws.write(3,4, 'Reactor B:')
+        ws.write(4, 4, 'Time (s):')
+        ws.write(4, 5, '% CO2:')
+        ws.write(4, 6, '% Output:')
+        for x in range(len(self.reactorBtime)):
+                ws.write(x+5,4,self.reactorBtime[x])
+        for x in range(len(self.reactorBco2)):
+                ws.write(x+5,5,self.reactorBco2[x])
+        for x in range(len(self.reactorBpwr)):
+                ws.write(x+5,6,self.reactorBpwr[x])
+        
+        ws.write(3,8, 'Reactor C:')
+        ws.write(4, 8, 'Time (s):')
+        ws.write(4, 9, '% CO2:')
+        ws.write(4, 10, '% Output:')
+        for x in range(len(self.reactorCtime)):
+                ws.write(x+5,8,self.reactorCtime[x])
+        for x in range(len(self.reactorCco2)):
+                ws.write(x+5,9,self.reactorCco2[x])
+        for x in range(len(self.reactorCpwr)):
+                ws.write(x+5,10,self.reactorCpwr[x])
+        
+        ws.write(3,12, 'Reactor D:')
+        ws.write(4, 12, 'Time (s):')
+        ws.write(4, 13, '% CO2:')
+        ws.write(4, 14, '% Output:')
+        for x in range(len(self.reactorDtime)):
+                ws.write(x+5,12,self.reactorDtime[x])
+        for x in range(len(self.reactorDco2)):
+                ws.write(x+5,13,self.reactorDco2[x])
+        for x in range(len(self.reactorDpwr)):
+                ws.write(x+5,14,self.reactorDpwr[x])
+        
+        ws.write(3,16, 'Waste Pumps:')
+        ws.write(4, 16, 'Time (s):')
+        ws.write(4, 17, '% Output:')
+        for x in range(len(self.wastetime)):
+                ws.write(x+5,16,self.wastetime[x])
+        for x in range(len(self.wastepwr)):
+                ws.write(x+5,17,self.wastepwr[x])
         #ws.write(y,x,data)
         
         
@@ -500,10 +572,10 @@ class mainWindow(QtGui.QWidget):
                 self.time.start()
                 state = start(self.port)
                 if state == True:
-                        
+                        self.startdate = QtCore.QDateTime.currentDateTime()
                         self.showMessage("Expiriment Started")
                 elif state == False:
-                        
+                        self.enddate = QtCore.QDateTime.currentDateTime()
                         self.showMessage("Expiriment Stopped")
                 else:
                         errormessage("Error: Please Retry 'Connect'")
@@ -522,6 +594,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
 
