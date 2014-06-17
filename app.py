@@ -1,10 +1,9 @@
 '''
-Serial Communication Protocol:
-Outgoing:
-        String of former lilst of tuples of values
-Incoming:
-        String of 'T's and 'F's to represent which pumps are on
-        String of values that indicate CO2 percentages in bioreactors
+Application for Monitoring and Controlling up to 4 Bioreactors
+Devleoped by Paul Rockaway (paulrockaway@gmail.com) for Shamoo Lab @ Rice University
+This application interacts with a TI MSP430G2553 Launchpad that controls 8 pumps
+and reads the CO2 levels in each bioreactor from a gas analyzer
+In deveopment as of 6-17-14
 '''
 
 import os
@@ -18,15 +17,8 @@ from PyQt4 import QtCore
 import pyqtgraph as pg
 import xlwt
 
-##Variables##
-
-
-
-
-
 ##Functions for Serial Communication##
 
-#may be useful if other serial ports are in existance
 def serial_ports():
     """
     Returns a generator for all available serial ports
@@ -46,6 +38,15 @@ def serial_ports():
             yield port[0]
 
 def errormessage(error):
+        '''
+        Creates an error dialog box that user has to push 'ok' to move past
+        
+        Input:
+        String to be displayed
+        
+        Output:
+        None
+        '''
         err = QtGui.QMessageBox()
         err.setText(error)
         err.exec_()
@@ -88,6 +89,17 @@ def connectserial():
                         return sercom
 
 def testserial(sercom,sendstring):
+        '''
+        Tests an established serial connection by writing and then reading the results (dependant on protocol)
+        
+        Input:
+        Pyserial Class Object to test
+        String to send
+        
+        Output:
+        True if the connection is working
+        False if the connection is not working
+        '''
         print "Writing: '" + str(sendstring)+ "'"
         sercom.write(str(sendstring))
         testrecieved = ""
@@ -136,13 +148,31 @@ def convertvalues(string):
                 
         
 def decode(string):
+        '''
+        Takes the input string from the MSP and converts it into appropriate data format
         
+        Input:
+        String that the MSP sends
+        
+        Output:
+        Tuple of the device info being updated, the CO2 level, and the Output power level
+        '''
         co2 = string[1]* 256 + string[2]
         pwr = string[3] *256 + string[4]
         return (string[0], co2, pwr)
         
 
 def start(serial):
+        '''
+        Begins the expiriment
+        
+        Input:
+        Pyserial Class Object of the serial device that is being started
+        
+        Output:
+        True if the expiriment is started
+        False if the expiriment is not started
+        '''
         serial.write('start\n')
         recieved = ""
         giveupcounter = 0 
@@ -161,6 +191,15 @@ def start(serial):
                 return False
         
 def timeConvert(qttime):
+        '''
+        Converts QtCore.QDateTime.currentDateTime() format into a semi formatted string of current date/time by significance
+        
+        Input:
+        Output of QtCore.QDateTime.currentDateTime()
+        
+        Ouput:
+        Semi formatted string of the date and time to the second
+        ''' 
         timenumlist = str(qttime)[23:-1].split(', ')
         timestrlist = []
         for datenum in timenumlist:
@@ -177,7 +216,16 @@ def timeConvert(qttime):
 
 class mainWindow(QtGui.QWidget):
     
-    def __init__(self, application):
+    def __init__(self):
+        '''
+        Initializes the mainWindow class
+        
+        Input:
+        None
+        
+        Output:
+        None
+        '''
         super(mainWindow, self).__init__()
         
         #### Reactor Results ####
@@ -211,15 +259,33 @@ class mainWindow(QtGui.QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(lambda: self.update())
         self.timer.start(1000)
-        self.exapp = application
+        
         self.initUI()
     
     def getTime(self):
+        '''
+        Updates the elapsed time counter and returns it
+        
+        Input:
+        None
+        
+        Output:
+        Time elapse since the expiriment began (in seconds)
+        '''
         self.timecounter += self.time.elapsed()/1000
         self.time.restart()
         return self.timecounter
         
     def update(self):
+        '''
+        Function that gets called to update all the data and read the input from the MSP
+        
+        Input:
+        None
+        
+        Output:
+        None
+        '''
         if self.started == True:
                 if self.portopen == True:
                         if self.port.inWaiting() > 0:
@@ -267,6 +333,15 @@ class mainWindow(QtGui.QWidget):
                 
         
     def export(self):
+        '''
+        Exports the current data to an Excel file by the name 'Data.xls'
+        
+        Input:
+        None
+        
+        Output:
+        XLS file
+        '''
         wb = xlwt.Workbook()
         ws = wb.add_sheet('Bioreactor Results')
         if self.startdate != '':
@@ -329,13 +404,19 @@ class mainWindow(QtGui.QWidget):
                 ws.write(x+5,16,self.wastetime[x])
         for x in range(len(self.wastepwr)):
                 ws.write(x+5,17,self.wastepwr[x])
-        #ws.write(y,x,data)
-        
         
         wb.save('Data.xls')
         
     def initUI(self):      
+        '''
+        Creates the gui for the application. Is called once by __init__.
         
+        Input:
+        None
+        
+        Output:
+        None
+        '''
        
         grid = QtGui.QGridLayout()
         
@@ -348,28 +429,28 @@ class mainWindow(QtGui.QWidget):
         self.plotA.getPlotItem().setTitle("Reactor A", **labelStyle)
         self.plotA.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotA.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
-        self.plotA.setRange(None,(0,1),(0,0.2))
+        self.plotA.setRange(None,(0,1),(0,1))
         
         self.plotB = pg.PlotWidget()
         grid.addWidget(self.plotB ,5,10,10,10)
         self.plotB.getPlotItem().setTitle("Reactor B", **labelStyle)
         self.plotB.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotB.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
-        self.plotB.setRange(None,(0,1),(0,0.2))
+        self.plotB.setRange(None,(0,1),(0,1))
         
         self.plotC = pg.PlotWidget()
         grid.addWidget(self.plotC ,15,0,10,10)
         self.plotC.getPlotItem().setTitle("Reactor C", **labelStyle)
         self.plotC.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotC.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
-        self.plotC.setRange(None,(0,1),(0,0.2))
+        self.plotC.setRange(None,(0,1),(0,1))
         
         self.plotD = pg.PlotWidget()
         grid.addWidget(self.plotD ,15,10,10,10)
         self.plotD.getPlotItem().setTitle("Reactor D", **labelStyle)
         self.plotD.getPlotItem().setLabel('left', '<font color="#ffffff">%</font><font color="#ffffff"> </font><font color="#00ff00">CO2</font><font color="#00ff00"> </font><font color="#ff0000">Pump</font>', None, **co2labelStyle)
         self.plotD.getPlotItem().setLabel('bottom', "Time (Hr)", None, **labelStyle)
-        self.plotD.setRange(None,(0,1),(0,0.2))
+        self.plotD.setRange(None,(0,1),(0,1))
         
         
         #####Buttons######
@@ -519,10 +600,27 @@ class mainWindow(QtGui.QWidget):
         self.show()
     
     def showMessage(self, mesg):
+        '''
+        Updates the info message at the bottom of the window
+        
+        Input:
+        mesg: string that is to be displayed
+        
+        Output: 
+        None
+        '''
         self.messagelbl.setText(mesg)
         
     def buttonClicked(self):
-      
+        '''
+        Function executes on button press. Some functions are then called to deal with the event
+        
+        Input:
+        None
+        
+        Ouput:
+        None
+        '''
         sender = self.sender()
         if sender.text() == "Connect":
                 self.port = connectserial()
@@ -585,7 +683,7 @@ class mainWindow(QtGui.QWidget):
 def main():
     
     app = QtGui.QApplication(sys.argv)
-    ex = mainWindow(app)
+    ex = mainWindow()
     sys.exit(app.exec_())
     
 
