@@ -12,11 +12,21 @@ MSP430 Code
 #define manifoldC BIT3
 #define manifoldD BIT4
 
+#define wastepumps BIT7
+#define reactorApump BIT6
+#define reactorBpump BIT5
+#define reactorCpump BIT4
+#define reactorDpump BIT3
+
 int state = 0;
 char statelist[4] = {'A','B','C','D'};
 int currentreading =0;
 char outlist[5];
 int ON = 0;
+int pwmcounter = 0;
+
+const unsigned long smclk_freq = 16000000;      // SMCLK frequency in hertz
+const unsigned long bps = 9600;                 // Async serial bit rate
 
 char readlist[27];
 
@@ -82,43 +92,140 @@ void main(void){
 
 
 	/*Setup Pins*/
-
+        P1DIR |= wastepumps | reactorApump | reactorBpump | reactorCpump | reactorDpump;
+        P1OUT &= wastepumps | reactorApump | reactorBpump | reactorCpump | reactorDpump;
+        P1SEL &= wastepumps | reactorApump | reactorBpump | reactorCpump | reactorDpump;
+        
+        P2DIR |= manifoldA | manifoldB | manifoldC | manifoldD;
+        P2OUT &= manifoldA | manifoldB | manifoldC | manifoldD;
+        P2SEL &= manifoldA | manifoldB | manifoldC | manifoldD;
         while (1){
-                if (ON == TRUE){
-                
-                
+                if (ON == FALSE){
+                        P1OUT &= wastepumps | reactorApump | reactorBpump | reactorCpump | reactorDpump;
+                        P2OUT &= manifoldA | manifoldB | manifoldC | manifoldD;
+                        LPM3;
                 }
-                
-                        
-                
         }
-        
-        
 
 }
 
 #pragma vector = TIMER0_A0_VECTOR //interrupt by main clock
+__interrupt void pwm(void){
+        if ( ON == TRUE){
+                if (pwmcounter == 0){
+                        P1OUT = wastepumps | reactorApump | reactorBpump | reactorCpump | reactorDpump;
+                }
+                
+                if (pwmcounter == wastepumps){
+                        P1OUT &= ~wastepumps;
+                }
+                if (pwmcounter == reactorApump){
+                        P1OUT &= ~reactorApump;
+                }
+                if (pwmcounter == reactorBpump){
+                        P1OUT &= ~reactorBpump;
+                }
+                if (pwmcounter == reactorCpump){
+                        P1OUT &= ~reactorCpump;
+                }
+                if (pwmcounter == reactorDpump){
+                        P1OUT &= ~reactorDpump;
+                }
+                pwmcounter += 1;
+                if (pwmcounter == 10000){
+                        pwmcounter = 0;
+                }
+         }
+        
+}
+
+#pragma vector = TIMER0_A0_VECTOR //interrupt by main clock
 __interrupt void update(void){
-	//read adc
+	//read adc and build message and update manifold
 	ADC10CTL0 |= ENC+ ADC10SC; //Get ADC reading
 	currentreading = ADC10MEM;
-	//build protocl
-	outlist[0] = statelist[state];
-	outlist[1] = ((currentreading & 0xFF00)>>8)& 0x00FF;
-	outlist[2] = currentreading & 0x00FF;
-	outlist[3] =  ;
-	outlist[4] =  ;
-	//send data
+	if (state == 0){
+	        if (currentreading > reactorAthreash){
+	                reactorApwr = reactorAonpwr;
+	        }
+	        else{
+	                reactorApwr = reactorAoffpwr;
+	        }
+	        outlist[0] = statelist[state];
+	        outlist[1] = ((currentreading & 0xFF00)>>8)& 0x00FF;
+	        outlist[2] = currentreading & 0x00FF;
+	        outlist[3] = ((reactorApwr & 0xFF00)>>8)& 0x00FF;
+	        outlist[4] = reactorApwr & 0x00FF;
+	        
+	        //P2OUT = manifoldB;
+	}
+	else if (state == 1){
+	        if (currentreading > reactorBthreash){
+	                reactorBpwr = reactorBonpwr;
+	        }
+	        else{
+	                reactorBpwr = reactorBoffpwr;
+	        }
+	        outlist[0] = statelist[state];
+	        outlist[1] = ((currentreading & 0xFF00)>>8)& 0x00FF;
+	        outlist[2] = currentreading & 0x00FF;
+	        outlist[3] = ((reactorBpwr & 0xFF00)>>8)& 0x00FF;
+	        outlist[4] = reactorBpwr & 0x00FF;
+	        
+	        //P2OUT = manifoldC;
+	}
+	else if (state == 2){
+	        if (currentreading > reactorCthreash){
+	                reactorCpwr = reactorConpwr;
+	        }
+	        else{
+	                reactorCpwr = reactorCoffpwr;
+	        }
+	        outlist[0] = statelist[state];
+	        outlist[1] = ((currentreading & 0xFF00)>>8)& 0x00FF;
+	        outlist[2] = currentreading & 0x00FF;
+	        outlist[3] = ((reactorCpwr & 0xFF00)>>8)& 0x00FF;
+	        outlist[4] = reactorCpwr & 0x00FF;
+	        
+	        //P2OUT = manifoldD;
+	}
+	else if (state == 3){
+	        if (currentreading > reactorDthreash){
+	                reactorDpwr = reactorDonpwr;
+	        }
+	        else{
+	                reactorDpwr = reactorDoffpwr;
+	        }
+	        outlist[0] = statelist[state];
+	        outlist[1] = ((currentreading & 0xFF00)>>8)& 0x00FF;
+	        outlist[2] = currentreading & 0x00FF;
+	        outlist[3] = ((reactorDpwr & 0xFF00)>>8)& 0x00FF;
+	        outlist[4] = reactorDpwr & 0x00FF;
+	        
+	        //P2OUT = manifoldA;
+	}
+	///send data
+	int x;
 	for ( x = 5; x >0; x--){
 	        out(outlist[x]);
 	}
-	//change manifold
-	
 	
 	state += 1;
 	if (state > 3){
 	        state = 0;
 	}
+	//Send waste pump power
+	if (state == 0){
+	        outlist[0] = 'W';
+	        outlist[1] = 'N';
+	        outlist[2] = 'N';
+	        outlist[3] = ((wastepwr & 0xFF00)>>8)& 0x00FF;
+	        outlist[4] = wastepwr & 0x00FF;
+	        for ( x = 5; x >0; x--){
+	                out(outlist[x]);
+	        }
+	}
+	        
 }
 
 #pragma vector=USCIAB0RX_VECTOR
@@ -135,9 +242,9 @@ __interrupt void USCI0RX_ISR(void)
 	                        ON = TRUE;
 	                        out('s');out('t');out('a');out('r');out('t');out('\n');
 	                }
-	                
+	        }
 	        else if (readlist[0] == 't' && readlist[1] =='s' && readlist[2] =='e' && readlist[3] == 't' ){
-	                continue;
+	                
 	        }
 	        else {
 	                wastepwr = (readlist[0]<<8)&readlist[1];
@@ -157,6 +264,7 @@ __interrupt void USCI0RX_ISR(void)
 	                
 	        
 	}
+	int i;
 	for (i = 26; i>0; i--){
 	        readlist[i] = readlist[i-1];
 	}
